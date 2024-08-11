@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe Cyberpunk Edition</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #0d0d0d;
+            color: rgb(0, 255, 30);
+        }
+        .player-names {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .player-names input {
+            padding: 10px;
+            margin: 5px;
+            font-size: 1em;
+            border: 2px solid rgb(0, 255, 0);
+            background: #111;
+            color: rgb(0, 255, 21);
+            border-radius: 5px;
+            width: 200px;
+            text-align: center;
+        }
+        .player-names button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background: rgb(0, 251, 38);
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            margin-top: 10px;
+        }
+        .game-container {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+            border: 2px solid rgb(0, 255, 30);
+            font-size: 2em;
+            cursor: pointer;
+            color: rgb(0, 255, 17);
+            transition: background 0.3s, transform 0.3s;
+        }
+        .cell:hover {
+            background: #000000;
+            transform: scale(1.1);
+        }
+        .message {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+        .reset-button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background: rgb(255, 0, 0);
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            margin-top: 10px;
+        }
+        .play-cpu-button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background: rgb(0, 251, 38);
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            margin-top: 10px;
+        }
+        .winner-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #111;
+            color: rgb(0, 255, 4);
+            padding: 20px;
+            border: 2px solid rgb(255, 0, 0);
+            display: none;
+            z-index: 10;
+        }
+        .winner-popup button {
+            margin-top: 10px;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            z-index: 5;
+        }
+        @media (max-width: 600px) {
+            .game-container {
+                grid-template-columns: repeat(3, 80px);
+                grid-template-rows: repeat(3, 80px);
+                gap: 5px;
+            }
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 1.5em;
+            }
+            .player-names input {
+                width: 150px;
+            }
+        }
+        .flip-in {
+            animation: flipIn 0.5s ease-in-out;
+        }
+        @keyframes flipIn {
+            from {
+                transform: rotateY(90deg);
+                opacity: 0;
+            }
+            to {
+                transform: rotateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h3></h3>
+    <div class="player-names">
+        <input type="text" id="playerX" placeholder="Player 1 Name">
+        <input type="text" id="playerO" placeholder="Player 2 Name">
+        <button onclick="startGame()"><i class="fas fa-play"></i> Start</button>
+    </div>
+    <div class="game-container" id="game-container">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+    </div>
+    <p class="message" id="message"></p>
+    <button class="reset-button" onclick="resetGame()"><i class="fas fa-undo"></i> Reset Game</button>
+    <button class="play-cpu-button" onclick="playWithCPU()"><i class="fas fa-robot"></i> Play with CPU</button>
+
+    <div class="winner-popup" id="winner-popup">
+        <p id="winner-message"></p>
+        <button onclick="closePopup()">Play Again</button>
+    </div>
+    <div class="overlay" id="overlay"></div>
+
+    <script>
+        let currentPlayer = 'X';
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let isCPU = false;
+        let playerXName = 'Player 1';
+        let playerOName = 'Player 2';
+        const cells = document.querySelectorAll('.cell');
+        const message = document.getElementById('message');
+        const winnerPopup = document.getElementById('winner-popup');
+        const overlay = document.getElementById('overlay');
+        const winnerMessage = document.getElementById('winner-message');
+
+        function startGame() {
+            playerXName = document.getElementById('playerX').value || 'Player 1';
+            playerOName = document.getElementById('playerO').value || 'Player 2';
+            message.textContent = `${playerXName}'s turn`;
+            resetGame();
+        }
+
+        cells.forEach(cell => cell.addEventListener('click', cellClicked));
+
+        function cellClicked(event) {
+            const index = event.target.getAttribute('data-index');
+            if (board[index] === '' && !checkWinner()) {
+                board[index] = currentPlayer;
+                event.target.textContent = currentPlayer;
+                if (checkWinner()) {
+                    showPopup(`${currentPlayer === 'X' ? playerXName : playerOName} wins!`);
+                } else if (board.every(cell => cell !== '')) {
+                    showPopup('It\'s a draw!');
+                } else {
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                    message.textContent = `${currentPlayer === 'X' ? playerXName : playerOName}'s turn`;
+                    if (isCPU && currentPlayer === 'O') {
+                        setTimeout(cpuMove, 500);
+                    }
+                }
+            }
+        }
+
+        function cpuMove() {
+            let availableCells = board.map((cell, index) => cell === '' ? index : null).filter(index => index !== null);
+            let randomIndex = availableCells[Math.floor(Math.random() * availableCells.length)];
+            board[randomIndex] = currentPlayer;
+            cells[randomIndex].textContent = currentPlayer;
+            if (checkWinner()) {
+                showPopup(`${currentPlayer === 'X' ? playerXName : playerOName} wins!`);
+            } else if (board.every(cell => cell !== '')) {
+                showPopup('It\'s a draw!');
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                message.textContent = `${currentPlayer === 'X' ? playerXName : playerOName}'s turn`;
+            }
+        }
+
+        function checkWinner() {
+            const winningCombinations = [            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+        return winningCombinations.some(combination => {
+            return combination.every(index => board[index] === currentPlayer);
+        });
+    }
+
+    function resetGame() {
+        board = ['', '', '', '', '', '', '', '', ''];
+        cells.forEach(cell => cell.textContent = '');
+        currentPlayer = 'X';
+        message.textContent = `${playerXName}'s turn`;
+        isCPU = false;
+        document.getElementById('playerX').value = '';
+        document.getElementById('playerO').value = '';
+    }
+
+    function playWithCPU() {
+        resetGame();
+        isCPU = true;
+        message.textContent = "Now, you're playing with CPU!";
+        document.querySelector('.game-container').classList.add('flip-in');
+    }
+
+    function showPopup(text) {
+        winnerMessage.textContent = text;
+        winnerPopup.style.display = 'block';
+        overlay.style.display = 'block';
+    }
+
+    function closePopup() {
+        winnerPopup.style.display = 'none';
+        overlay.style.display = 'none';
+        resetGame();
+    }
+</script>
+</body>
+</html>
