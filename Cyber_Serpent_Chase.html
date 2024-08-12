@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Serpent Chase by JAHIN</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: #00ff11;
+            font-family: 'VT323', monospace;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            margin: 20px;
+            font-size: 36px;
+            color: #22ff00;
+            text-shadow: 0 0 10px #ff1500, 0 0 20px #ff0000;
+        }
+
+        .game-area {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            margin: 20px auto;
+            background-color: #1a1a1a;
+            border: 2px solid #00ff15;
+        }
+
+        .snake {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #0f9c32;
+            border-radius: 25%;
+        }
+
+        .food {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #ff00e1;
+            border-radius: 50%;
+        }
+
+        .score {
+            position: absolute;
+            top: 0px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            z-index: 10;
+        }
+
+        .controls {
+            display: none;
+        }
+
+        .control-button {
+            width: 60px;
+            height: 60px;
+            background-color: #00ff00;
+            color: #0a0a0a;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            position: fixed;
+            z-index: 100;
+            opacity: 0.8;
+        }
+        .control-button:hover {
+            background-color: #ff0066;
+            color: #ffffff;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px #15ff00, 0 0 30px #33ff00;
+            cursor:pointer;
+            transition: all 0.3s ease-in-out;
+}
+
+
+
+        #up {
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #down {
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #left {
+            bottom: 100px;
+            left: calc(50% - 80px);
+        }
+
+        #right {
+            bottom: 100px;
+            left: calc(50% + 20px);
+        }
+
+        @media (max-width: 600px) {
+            .controls {
+                display: block;
+            }
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(10, 10, 10, 0.9);
+            padding: 20px;
+            border: 2px solid #2bff00;
+            box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+            text-align: center;
+            z-index: 200;
+        }
+
+        .popup h2 {
+            margin: 0;
+            padding: 10px;
+            font-size: 24px;
+        }
+
+        .popup p {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+
+        .play-again {
+            font-family: 'VT323', monospace;
+            padding: 10px 20px;
+            background-color: #26ff00;
+            color: #0a0a0a;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .play-again:hover {
+           background-color: #ff0066;
+           color: #ffffff;
+           transform: scale(1.1);
+           box-shadow: 0 0 15px #00ff00, 0 0 30px #37ff00;
+           cursor: pointer;
+           transition: all 0.3s ease-in-out;
+}
+
+    </style>
+</head>
+<body>
+    <h1>Cyber Serpent Chase</h1>
+    <div class="score" id="score">Score: 0</div>
+    <div class="game-area" id="gameArea"></div>
+
+    <div class="controls">
+        <button class="control-button" id="up">&#9650;</button>
+        <button class="control-button" id="down">&#9660;</button>
+        <button class="control-button" id="left">&#9664;</button>
+        <button class="control-button" id="right">&#9654;</button>
+    </div>
+
+    <div class="popup" id="gameOverPopup">
+        <h2>Game Over</h2>
+        <p id="finalScore">Your Score: 0</p>
+        <button class="play-again" id="playAgain">Play Again</button>
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('gameArea');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverPopup = document.getElementById('gameOverPopup');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const playAgainButton = document.getElementById('playAgain');
+        const gridSize = 20;
+        let snake = [{x: 100, y: 100}];
+        let food = {x: 200, y: 200};
+        let direction = {x: 0, y: 0};
+        let score = 0;
+
+        function createSnake() {
+            snake.forEach(segment => {
+                const snakeElement = document.createElement('div');
+                snakeElement.style.left = `${segment.x}px`;
+                snakeElement.style.top = `${segment.y}px`;
+                snakeElement.classList.add('snake');
+                gameArea.appendChild(snakeElement);
+            });
+        }
+
+        function createFood() {
+            const foodElement = document.createElement('div');
+            foodElement.style.left = `${food.x}px`;
+            foodElement.style.top = `${food.y}px`;
+            foodElement.classList.add('food');
+            gameArea.appendChild(foodElement);
+        }
+
+        function moveSnake() {
+            const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+
+            // End the game if the snake touches the border
+            if (head.x < 0 || head.y < 0 || head.x >= gameArea.offsetWidth || head.y >= gameArea.offsetHeight) {
+                gameOver();
+                return;
+            }
+
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                scoreDisplay.textContent = `Score: ${score}`;
+                generateFood();
+            } else {
+                snake.pop();
+            }
+
+            if (isCollision(head)) {
+                gameOver();
+            }
+        }
+
+        function isCollision(head) {
+            return snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y);
+        }
+
+        function gameOver() {
+            finalScoreDisplay.textContent = `Your Score: ${score}`;
+            gameOverPopup.style.display = 'block';
+            snake = [{x: 100, y: 100}];
+            direction = {x: 0, y: 0};
+        }
+
+        function generateFood() {
+            food.x = Math.floor(Math.random() * (gameArea.offsetWidth / gridSize)) * gridSize;
+            food.y = Math.floor(Math.random() * (gameArea.offsetHeight / gridSize)) * gridSize;
+        }
+
+        function updateGame() {
+            gameArea.innerHTML = '';
+            moveSnake();
+            createSnake();
+            createFood();
+        }
+
+        function changeDirection(newDirection) {
+            const oppositeDirection = {
+                ArrowUp: 'ArrowDown',
+                ArrowDown: 'ArrowUp',
+                ArrowLeft: 'ArrowRight',
+                ArrowRight: 'ArrowLeft'
+            };
+
+            if (newDirection !== oppositeDirection[direction]) {
+                switch (newDirection) {
+                    case 'ArrowUp':
+                        direction = {x: 0, y: -gridSize};
+                        break;
+                    case 'ArrowDown':
+                        direction = {x: 0, y: gridSize};
+                        break;
+                    case 'ArrowLeft':
+                        direction = {x: -gridSize, y: 0};
+                        break;
+                    case 'ArrowRight':
+                        direction = {x: gridSize, y: 0};
+                        break;
+                }
+            }
+        }
+
+        document.addEventListener('keydown', event => changeDirection(event.key));
+
+        document.getElementById('up').addEventListener('click', () => changeDirection('ArrowUp'));
+        document.getElementById('down').addEventListener('click', () => changeDirection('ArrowDown'));
+        document.getElementById('left').addEventListener('click', () => changeDirection('ArrowLeft'));
+        document.getElementById('right').addEventListener('click', () => changeDirection('ArrowRight'));
+
+        playAgainButton.addEventListener('click', () => {
+            score = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            gameOverPopup.style.display = 'none';
+            generateFood();
+        });
+
+        setInterval(updateGame, 250); // Slower speed
+    </script>
+</body>
+</html>
